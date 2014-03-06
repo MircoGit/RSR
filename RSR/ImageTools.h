@@ -12,5 +12,6 @@ class ImageTools
 {
 public:
 	static vector<Vec3f>* detectCircles(Mat& src);
+	static void compareImgHisto(Mat& src, Mat& test1, Mat& test2);
 };
 
