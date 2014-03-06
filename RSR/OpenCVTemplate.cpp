@@ -2,15 +2,14 @@
 //
 
 #include "stdafx.h"
+#include "ImageTools.h"
 #include "opencv2\opencv.hpp"
 #include "opencv2\highgui\highgui.hpp"
 #include "opencv2\imgproc\imgproc.hpp"
 #include <iostream>
-#include <stdio.h>
+#include <cstdio>
 
 using namespace cv;
-
-vector<Vec3f>* detectCircles(Mat& src);
 
 /** @function main */
 int main(int argc, char** argv)
@@ -24,7 +23,7 @@ int main(int argc, char** argv)
 	{ return -1; }
 
 	vector<Vec3f>* circles;
-	circles = detectCircles(src);
+	circles = ImageTools::detectCircles(src);
   
 	/// Draw the circles detected
 	for( size_t i = 0; i < circles->size(); i++ )
@@ -41,31 +40,9 @@ int main(int argc, char** argv)
 	delete circles;
 
 	/// Show your results
-	namedWindow( "Hough Circle Transform Demo", CV_WINDOW_AUTOSIZE );
-	imshow( "Hough Circle Transform Demo", src );
+	namedWindow( "Road sign detection", CV_WINDOW_AUTOSIZE );
+	imshow( "Road sign detection", src );
 
 	waitKey(0);
 	return 0;
-}
-
-vector<Vec3f>* detectCircles(Mat& src)
-{
-	Mat src_gray;
-	vector<Vec3f>* circles = new vector<Vec3f>();
-
-	if(src.data)		
-	{
-		/// Convert it to gray
-		cvtColor( src, src_gray, CV_BGR2GRAY );
-
-		/// Reduce the noise so we avoid false circle detection
-		GaussianBlur( src_gray, src_gray, Size(9, 9), 2, 2 );	
-  
-		/// Apply the Hough Transform to find the circles
-		HoughCircles( src_gray, *circles, CV_HOUGH_GRADIENT, 1, src_gray.rows/8, 200, 66, 0, 0 );
-	}
-
-	std::cout << "[detectCircles] " << circles->size() << " circles found on image";
-
-	return circles;
 }
