@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "ImageTools.h"
 #include <iostream>
-#include <cmath>
 
 
 /**
@@ -25,38 +24,12 @@ vector<Vec3f>* ImageTools::detectCircles(const Mat& src)
 		GaussianBlur( src_gray, src_gray, Size(9, 9), 2, 2 );	
   
 		/// Apply the Hough Transform to find the circles
-		HoughCircles( src_gray, *circles, CV_HOUGH_GRADIENT, 1, src_gray.rows/8, 170, 70, src_gray.rows/100000000, src_gray.rows );
+		HoughCircles( src_gray, *circles, CV_HOUGH_GRADIENT, 1, src_gray.rows/8, 200, 66, 0, 0 );
 	}
 
 	cout << "[ImageTools::detectCircles] " << circles->size() << " circles found on image" << endl;
 
 	return circles;
-}
-
-Mat ImageTools::scale(const Mat& from, const Mat& to)
-{
-	Mat resizedImage = from.clone();
-
-	double fromWidthHeightRatio = 1.0 * from.cols / from.rows;
-
-	Size newSize;
-	
-	//Resize considering width
-	if(to.cols < to.rows)
-	{
-		newSize.width = to.cols;
-		newSize.height = newSize.width / fromWidthHeightRatio;
-	}
-	//Or heigth
-	else
-	{
-		newSize.height = to.rows;
-		newSize.width = newSize.height * fromWidthHeightRatio;
-	}
-
-	cv::resize(from, resizedImage, newSize);	
-
-	return resizedImage;
 }
 
 Mat ImageTools::crop(const Mat& src, Rect croppingRect)

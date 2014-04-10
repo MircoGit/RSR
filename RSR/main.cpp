@@ -16,6 +16,31 @@ using namespace cv;
 /** @function main */
 int main(int argc, char** argv)
 {
+	//// Declaration of the images
+	//Mat src_base; // Image to check
+	//Mat src_test1; // Reference image 1
+	//Mat src_test2; // Reference image 2
+
+	//// Check the number of cmd arguments
+	//if( argc < 4 )
+	//{
+	//	printf("** Error. Usage: ./compareHist_Demo <image_settings0> <image_setting1> <image_settings2>\n");
+	//	return -1;
+	//}
+
+	//// Reading of the images
+	//src_base = imread( argv[1], CV_LOAD_IMAGE_COLOR );
+	//src_test1 = imread( argv[2], CV_LOAD_IMAGE_COLOR );
+	//src_test2 = imread( argv[3], CV_LOAD_IMAGE_COLOR );
+
+	//// Comparaison
+	//ImageTools::compareImgHisto(src_base, src_test1, src_test2);
+
+	//printf( "Done \n" );
+
+
+
+
 	Mat src, src_gray;
 
 	/// Read the image
@@ -27,8 +52,8 @@ int main(int argc, char** argv)
 	vector<Vec3f>* circles;
 	vector<Mat> croppedImages;
 	circles = ImageTools::detectCircles(src);
-  
-	/// Draw the circles detected
+	 
+	// Draw the circles detected
 	for( size_t i = 0; i < circles->size(); i++ )
 	{
 		croppedImages.push_back(ImageTools::crop(src, (*circles)[i]));
@@ -39,7 +64,8 @@ int main(int argc, char** argv)
 		circle( src, center, 3, Scalar(0,255,0), -1, 8, 0 );
 		// circle outline
 		circle( src, center, radius, Scalar(0,0,255), 3, 8, 0 );
-	}	
+	  
+
 	delete circles;
 
 	/// Show your results
