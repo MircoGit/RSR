@@ -1,29 +1,39 @@
 #include "stdafx.h"
 #include "ImageTools.h"
+#include "opencv2\opencv.hpp"
+#include "opencv2\highgui\highgui.hpp"
+#include "opencv2\imgproc\imgproc.hpp"
+#include "opencv2/core/core.hpp"
+#include "opencv2/features2d/features2d.hpp"
+#include "opencv2/nonfree/features2d.hpp"
+#include "Vector2D.h"
 #include <iostream>
 #include <cmath>
+#include <algorithm>
+#include <Windows.h>
+#include <tchar.h>
 
 
 /**
- *  Return a vector of circles found in an image. Circle are represented as Vec3F : 
- *  vec[0] = centerX
- *  vec[1] = centerY
- *  vec[2] = radius
- *  /!\ you must free the pointer returned by this method when not needed.
- */
+*  Return a vector of circles found in an image. Circle are represented as Vec3F : 
+*  vec[0] = centerX
+*  vec[1] = centerY
+*  vec[2] = radius
+*  /!\ you must free the pointer returned by this method when not needed.
+*/
 vector<Vec3f>* ImageTools::detectCircles(const Mat& src)
 {
-	Mat src_gray;
+	Mat src_gray = src;
 	vector<Vec3f>* circles = new vector<Vec3f>();
 
 	if(src.data)		
 	{
 		/// Convert it to gray
-		cvtColor( src, src_gray, CV_BGR2GRAY );
+		//cvtColor( src, src_gray, CV_BGR2GRAY );
 
 		/// Reduce the noise so we avoid false circle detection
 		GaussianBlur( src_gray, src_gray, Size(9, 9), 2, 2 );	
-  
+
 		/// Apply the Hough Transform to find the circles
 		HoughCircles( src_gray, *circles, CV_HOUGH_GRADIENT, 1, src_gray.rows/8, 170, 70, src_gray.rows/100000000, src_gray.rows );
 	}
@@ -40,7 +50,7 @@ Mat ImageTools::scale(const Mat& from, const Mat& to)
 	double fromWidthHeightRatio = 1.0 * from.cols / from.rows;
 
 	Size newSize;
-	
+
 	//Resize considering width
 	if(to.cols < to.rows)
 	{
@@ -74,7 +84,60 @@ Mat ImageTools::crop(const Mat& src, Vec3f croppingCircle)
 	Rect croppingRect(x, y, w, h);
 
 	Mat croppedImage =  ImageTools::crop(src, croppingRect);
-	return ImageTools::circleize(croppedImage);
+	return croppedImage;//ImageTools::circleize(croppedImage);
+}
+
+bool ImageTools::isObjectInScene(const Mat& img_object, const Mat& img_scene)
+{
+	bool result = false;
+
+	if( !img_object.data || !img_scene.data )
+	{ std::cout<< " --(!) Error reading images " << std::endl; return false; }
+
+	//-- Step 1: Detect the keypoints using SURF Detector
+	int minHessian = 400;
+
+	SurfFeatureDetector detector( minHessian );
+
+	std::vector<KeyPoint> keypoints_object, keypoints_scene;
+
+	detector.detect( img_object, keypoints_object );
+	detector.detect( img_scene, keypoints_scene );
+
+	//-- Step 2: Calculate descriptors (feature vectors)
+	SurfDescriptorExtractor extractor;
+
+	Mat descriptors_object, descriptors_scene;
+
+	extractor.compute( img_object, keypoints_object, descriptors_object );
+	extractor.compute( img_scene, keypoints_scene, descriptors_scene );
+
+	//-- Step 3: Matching descriptor vectors using FLANN matcher
+	FlannBasedMatcher matcher;
+	std::vector< DMatch > matches;
+	matcher.match( descriptors_object, descriptors_scene, matches );
+
+	double max_dist = 0; double min_dist = 100;
+
+	//-- Quick calculation of max and min distances between keypoints
+	for( int i = 0; i < descriptors_object.rows; i++ )
+	{ double dist = matches[i].distance;
+	if( dist < min_dist ) min_dist = dist;
+	if( dist > max_dist ) max_dist = dist;
+	}
+
+	printf("-- Max dist : %f \n", max_dist );
+	printf("-- Min dist : %f \n", min_dist );
+
+	//-- Draw only "good" matches (i.e. whose distance is less than 3*min_dist )
+	std::vector< DMatch > good_matches;
+
+	for( int i = 0; i < descriptors_object.rows; i++ )
+	{ if( matches[i].distance < 1.7*min_dist )
+	{ good_matches.push_back( matches[i]); }
+	}		
+
+	return !containsPointMoreThanOnce(keypoints_scene, good_matches);
 }
 
 Mat ImageTools::circleize(const Mat& src)
@@ -86,8 +149,6 @@ Mat ImageTools::circleize(const Mat& src)
 	int radius2 = (src.rows / 2) * (src.rows / 2); //square radius
 	int cx = src.rows / 2;
 	int cy = src.rows / 2;
-
-
 
 	int d = 0;
 	int dx = 0;
@@ -111,9 +172,32 @@ Mat ImageTools::circleize(const Mat& src)
 	return circleizedSrc;
 }
 
+bool ImageTools::containsPointMoreThanOnce(vector<KeyPoint>& keypoints, vector<DMatch>& good_matches)
+{
+	vector<Vector2D> foundKeypoints;
+	KeyPoint* keypoint = NULL;
+
+	for(int i=0; i<good_matches.size(); ++i)
+	{
+		keypoint = &keypoints[good_matches[i].trainIdx];
+
+		Vector2D v(keypoint->pt.x, keypoint->pt.y);		
+		if(find(foundKeypoints.begin(), foundKeypoints.end(), v) == foundKeypoints.end())
+		{
+			foundKeypoints.push_back(v);		
+		}
+		else
+		{
+			return true;
+		}		
+	}			
+
+	return false;
+}
+
 void ImageTools::compareImgHisto(Mat& src, Mat& test1, Mat& test2)
 {
-		// Declaration of the HSV images
+	// Declaration of the HSV images
 	Mat hsv_base;
 	Mat hsv_test1;
 	Mat hsv_test2;
@@ -162,4 +246,25 @@ void ImageTools::compareImgHisto(Mat& src, Mat& test1, Mat& test2)
 
 		printf( " Method [%d] Perfect, Base-Test(1), Base-Test(2) : %f, %f, %f \n", i, base_base, base_test1, base_test2 );
 	}
+}
+
+vector<RoadSignPath> ImageTools::getFilesList(string dir, string filter)
+{
+	vector<RoadSignPath> filesList;
+	HANDLE hFind;
+	WIN32_FIND_DATA FindFileData;	
+	
+	string path = dir + filter;	
+	wstring wdir = wstring(path.begin(), path.end());
+
+	if((hFind = FindFirstFile(wdir.c_str(), &FindFileData)) != INVALID_HANDLE_VALUE){
+		do{						
+			wstring wstr = FindFileData.cFileName;			
+			string str = string(wstr.begin(), wstr.end());
+			filesList.push_back(RoadSignPath(dir + str, str));				
+		}while(FindNextFile(hFind, &FindFileData));
+		FindClose(hFind);
+	}
+
+	return filesList;
 }
