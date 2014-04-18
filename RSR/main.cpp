@@ -3,83 +3,72 @@
 
 #include "stdafx.h"
 #include "ImageTools.h"
+#include "RoadSign.h"
+#include "RoadSignPath.h"
 #include "opencv2\opencv.hpp"
 #include "opencv2\highgui\highgui.hpp"
 #include "opencv2\imgproc\imgproc.hpp"
+#include "opencv2/core/core.hpp"
+#include "opencv2/features2d/features2d.hpp"
+#include "opencv2/nonfree/features2d.hpp"
 #include <iostream>
 #include <sstream>
 #include <cstdio>
-
 
 using namespace cv;
 
 /** @function main */
 int main(int argc, char** argv)
-{
-	//// Declaration of the images
-	//Mat src_base; // Image to check
-	//Mat src_test1; // Reference image 1
-	//Mat src_test2; // Reference image 2
+{	
+	//Mat img_object = imread( argv[1], CV_LOAD_IMAGE_GRAYSCALE );
+	Mat img_scene = imread( argv[1], CV_LOAD_IMAGE_GRAYSCALE );
 
-	//// Check the number of cmd arguments
-	//if( argc < 4 )
-	//{
-	//	printf("** Error. Usage: ./compareHist_Demo <image_settings0> <image_setting1> <image_settings2>\n");
-	//	return -1;
-	//}
-
-	//// Reading of the images
-	//src_base = imread( argv[1], CV_LOAD_IMAGE_COLOR );
-	//src_test1 = imread( argv[2], CV_LOAD_IMAGE_COLOR );
-	//src_test2 = imread( argv[3], CV_LOAD_IMAGE_COLOR );
-
-	//// Comparaison
-	//ImageTools::compareImgHisto(src_base, src_test1, src_test2);
-
-	//printf( "Done \n" );
-
-
-
-
-	Mat src, src_gray;
-
-	/// Read the image
-	src = imread( argv[1], CV_LOAD_IMAGE_COLOR );
-
-	if( !src.data )
-	{ return -1; }
+	vector<RoadSignPath> roadSignsPath = ImageTools::getFilesList("..\\Images\\RoadSigns\\", "*.png");;
 
 	vector<Vec3f>* circles;
 	vector<Mat> croppedImages;
-	circles = ImageTools::detectCircles(src);
-	 
-	// Draw the circles detected
-	for( size_t i = 0; i < circles->size(); i++ )
+	vector<RoadSign> roadSigns;
+	circles = ImageTools::detectCircles(img_scene);
+
+	Mat img_object;
+
+	for(int i=0; i< roadSignsPath.size(); ++i)
 	{
-		croppedImages.push_back(ImageTools::crop(src, (*circles)[i]));
+		img_object = imread( roadSignsPath[i].getPath(), CV_LOAD_IMAGE_GRAYSCALE );
+		
+		for(int i=0; i<circles->size(); ++i)
+		{
+			Mat cropped_scene = ImageTools::crop(img_scene, (*circles)[i]);		  //Rectangle containing a potential circular road sign
+			Mat img_object_scaled = ImageTools::scale(img_object, cropped_scene); //Scale the road sign template to the potential found road sign
 
-		Point center(cvRound((*circles)[i][0]), cvRound((*circles)[i][1]));
-		int radius = cvRound((*circles)[i][2]);
-		// circle center
-		circle( src, center, 3, Scalar(0,255,0), -1, 8, 0 );
-		// circle outline
-		circle( src, center, radius, Scalar(0,0,255), 3, 8, 0 );
-	  
-
-	delete circles;
-
-	/// Show your results
-	namedWindow( "Road sign detection", CV_WINDOW_AUTOSIZE );
-	imshow( "Road sign detection", src );
-
-	stringstream s;
-	for( size_t i = 0; i < croppedImages.size(); i++ )
-	{
-		s << "Road sign " << (i+1);		
-		imshow( s.str(), croppedImages[i] );
-		s.clear();
+			if(ImageTools::isObjectInScene(img_object_scaled, cropped_scene))
+			{
+				RoadSign rs((*circles)[i], roadSignsPath[i].getName());
+				roadSigns.push_back(rs);
+			}
+		}
 	}
 
-	waitKey(0);
+	delete circles;			
+
+	//Draw the circle for the found road signs
+	vector<RoadSign>::iterator it;
+	for(it = roadSigns.begin(); it != roadSigns.end(); ++it)
+	{
+		RoadSign rs = (*it);
+		Point center(cvRound(rs.getCircle()[0]), cvRound(rs.getCircle()[1]));
+		int radius = cvRound(rs.getCircle()[2]);		
+
+		// circle outline
+		circle( img_scene, center, radius, Scalar(0,0,255), 3, 8, 0 );
+
+		// Road sign name
+		Point text_center(cvRound(rs.getCircle()[0]), cvRound(rs.getCircle()[1]));
+		putText(img_scene, rs.getName(), text_center, FONT_HERSHEY_COMPLEX_SMALL, 1.0, cvScalar(0,0,0), 1, CV_AA);		
+	}
+
+	imshow("Scene", img_scene);
+
+	cv::waitKey(0);
 	return 0;
 }
