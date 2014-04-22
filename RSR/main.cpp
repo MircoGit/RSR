@@ -23,7 +23,12 @@ int main(int argc, char** argv)
 	//Mat img_object = imread( argv[1], CV_LOAD_IMAGE_GRAYSCALE );
 	Mat img_scene = imread( argv[1], CV_LOAD_IMAGE_GRAYSCALE );
 
-	vector<RoadSignPath> roadSignsPath = ImageTools::getFilesList("..\\Images\\RoadSigns\\", "*.png");;
+	vector<RoadSignPath> roadSignsPath;
+	vector<RoadSignPath> pngs = ImageTools::getFilesList("..\\Images\\RoadSigns\\", "*.png");	
+	vector<RoadSignPath> jpgs = ImageTools::getFilesList("..\\Images\\RoadSigns\\", "*.jpg");	
+		
+	roadSignsPath.insert(roadSignsPath.end(), pngs.begin(), pngs.end());
+	roadSignsPath.insert(roadSignsPath.end(), jpgs.begin(), jpgs.end());
 
 	vector<Vec3f>* circles;
 	vector<Mat> croppedImages;
