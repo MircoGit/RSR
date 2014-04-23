@@ -19,6 +19,7 @@ public:
 	static void compareImgHisto(Mat& src, Mat& test1, Mat& test2);
 	static bool isObjectInScene(const Mat& img_object, const Mat& img_scene);
 	static vector<RoadSignPath> getFilesList(string dir, string filter);
+	static bool isOrientationCorrect(const Mat& img_object, const Mat& img_scene);
 
 private:
 	static Mat circleize(const Mat& src);			

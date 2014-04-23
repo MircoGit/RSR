@@ -48,13 +48,19 @@ int main(int argc, char** argv)
 
 			if(ImageTools::isObjectInScene(img_object_scaled, cropped_scene))
 			{
+
+				if(ImageTools::isOrientationCorrect(img_object_scaled, cropped_scene))
+					cout << "Orientation seems to be OK with "  << roadSignsPath[i].getName() << "!" << endl;
+				else
+					cout << "Orientation seems to be bad with "  << roadSignsPath[i].getName() << "!" << endl;
+
 				RoadSign rs((*circles)[i], roadSignsPath[i].getName());
 				roadSigns.push_back(rs);
 			}
 		}
 	}
 
-	delete circles;			
+	delete circles;
 
 	//Draw the circle for the found road signs
 	vector<RoadSign>::iterator it;
@@ -69,7 +75,7 @@ int main(int argc, char** argv)
 
 		// Road sign name
 		Point text_center(cvRound(rs.getCircle()[0]), cvRound(rs.getCircle()[1]));
-		putText(img_scene, rs.getName(), text_center, FONT_HERSHEY_COMPLEX_SMALL, 1.0, cvScalar(0,0,0), 1, CV_AA);		
+		putText(img_scene, rs.getName(), text_center, FONT_HERSHEY_COMPLEX_SMALL, 1.0, cvScalar(0,0,0), 1, CV_AA);	
 	}
 
 	imshow("Scene", img_scene);

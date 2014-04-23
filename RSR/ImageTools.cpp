@@ -268,3 +268,102 @@ vector<RoadSignPath> ImageTools::getFilesList(string dir, string filter)
 
 	return filesList;
 }
+
+bool ImageTools::isOrientationCorrect(const Mat& img_object, const Mat& img_scene)
+{
+	if( !img_object.data || !img_scene.data )
+	{ std::cout<< " --(!) Error reading images " << std::endl; return false; }
+
+	//-- Step 1: Detect the keypoints using SURF Detector
+	int minHessian = 400;
+
+	SurfFeatureDetector detector( minHessian );
+
+	std::vector<KeyPoint> keypoints_object, keypoints_scene;
+
+	detector.detect( img_object, keypoints_object );
+	detector.detect( img_scene, keypoints_scene );
+
+	//-- Step 2: Calculate descriptors (feature vectors)
+	SurfDescriptorExtractor extractor;
+
+	Mat descriptors_object, descriptors_scene;
+
+	extractor.compute( img_object, keypoints_object, descriptors_object );
+	extractor.compute( img_scene, keypoints_scene, descriptors_scene );
+
+	//-- Step 3: Matching descriptor vectors using FLANN matcher
+	FlannBasedMatcher matcher;
+	std::vector< DMatch > matches;
+	matcher.match( descriptors_object, descriptors_scene, matches );
+
+	//-- Quick calculation of max and min distances between keypoints
+	double max_dist = 0; double min_dist = 100;
+	for( int i = 0; i < descriptors_object.rows; i++ )
+	{ double dist = matches[i].distance;
+	if( dist < min_dist ) min_dist = dist;
+	if( dist > max_dist ) max_dist = dist;
+	}
+
+	//printf("-- Max dist : %f \n", max_dist );
+	//printf("-- Min dist : %f \n", min_dist );
+
+	// -- Step 4: Keep only good matches
+	std::vector< DMatch > good_matches;
+	for( int i = 0; i < descriptors_object.rows; i++ )
+	{ if( matches[i].distance < 1.7*min_dist )
+	{ good_matches.push_back( matches[i]); }
+	}
+
+	cout << "number of goodmatches = " << good_matches.size() << endl;
+
+	if(good_matches.size() < 4)
+		return false;
+
+	std::vector<Point2f> obj;
+	std::vector<Point2f> scene;
+
+	for( int i = 0; i < good_matches.size(); i++ )
+	{
+		//-- Get the keypoints from the good matches
+		obj.push_back( keypoints_object[ good_matches[i].queryIdx ].pt );
+		scene.push_back( keypoints_scene[ good_matches[i].trainIdx ].pt );
+	}
+
+	// Compute homography matrix
+	Mat NormH;
+	Mat H = findHomography( obj, scene, CV_RANSAC );
+	normalize(H, NormH);
+
+	// Extract rotation from homography matrix
+	double a = H.at<double>(0,0);
+	double b = H.at<double>(0,1);
+	double c = H.at<double>(1,0);
+	double d = H.at<double>(1,1);
+
+	double x = H.at<double>(2,0);
+	double y = H.at<double>(2,1);
+	
+	//double rotation = atan2(b,a); // Radians
+	//cout << "rotation : " << atan2(b,a) << endl;
+
+	double det = a * d - c * b;
+	  cout << "det = " << det << endl;
+  if (det < 0)
+    return false;
+
+  //double N1 = sqrt(a * a + c * c);
+  //if (N1 > 4 || N1 < 0.1)
+  //  return false;
+
+  //double N2 = sqrt(b * b + d * d);
+  //if (N2 > 4 || N2 < 0.1)
+  //  return false;
+
+  //double N3 = sqrt(x * x + y * y);
+  //if (N3 > 0.002)
+  //  return false;
+
+  return true;
+
+}
