@@ -25,10 +25,10 @@ int main(int argc, char** argv)
 
 	vector<RoadSignPath> roadSignsPath;
 	vector<RoadSignPath> pngs = ImageTools::getFilesList("..\\Images\\RoadSigns\\", "*.png");	
-	vector<RoadSignPath> jpgs = ImageTools::getFilesList("..\\Images\\RoadSigns\\", "*.jpg");	
+	//vector<RoadSignPath> jpgs = ImageTools::getFilesList("..\\Images\\RoadSigns\\", "*.jpg");	
 		
 	roadSignsPath.insert(roadSignsPath.end(), pngs.begin(), pngs.end());
-	roadSignsPath.insert(roadSignsPath.end(), jpgs.begin(), jpgs.end());
+	//roadSignsPath.insert(roadSignsPath.end(), jpgs.begin(), jpgs.end());
 
 	vector<Vec3f>* circles;
 	vector<Mat> croppedImages;
@@ -40,21 +40,17 @@ int main(int argc, char** argv)
 	for(int i=0; i< roadSignsPath.size(); ++i)
 	{
 		img_object = imread( roadSignsPath[i].getPath(), CV_LOAD_IMAGE_GRAYSCALE );
+
+		cout << roadSignsPath[i].getName() << endl;
 		
-		for(int i=0; i<circles->size(); ++i)
+		for(int j=0; j<circles->size(); ++j)
 		{
-			Mat cropped_scene = ImageTools::crop(img_scene, (*circles)[i]);		  //Rectangle containing a potential circular road sign
+			Mat cropped_scene = ImageTools::crop(img_scene, (*circles)[j]);		  //Rectangle containing a potential circular road sign
 			Mat img_object_scaled = ImageTools::scale(img_object, cropped_scene); //Scale the road sign template to the potential found road sign
 
-			if(ImageTools::isObjectInScene(img_object_scaled, cropped_scene))
+			if(ImageTools::isObjectInScene(img_object_scaled, cropped_scene) && ImageTools::isOrientationCorrect(img_object_scaled, cropped_scene))
 			{
-
-				if(ImageTools::isOrientationCorrect(img_object_scaled, cropped_scene))
-					cout << "Orientation seems to be OK with "  << roadSignsPath[i].getName() << "!" << endl;
-				else
-					cout << "Orientation seems to be bad with "  << roadSignsPath[i].getName() << "!" << endl;
-
-				RoadSign rs((*circles)[i], roadSignsPath[i].getName());
+				RoadSign rs((*circles)[j], roadSignsPath[i].getName());
 				roadSigns.push_back(rs);
 			}
 		}
