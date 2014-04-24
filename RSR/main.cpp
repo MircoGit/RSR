@@ -25,10 +25,10 @@ int main(int argc, char** argv)
 
 	vector<RoadSignPath> roadSignsPath;
 	vector<RoadSignPath> pngs = ImageTools::getFilesList("..\\Images\\RoadSigns\\", "*.png");	
-	//vector<RoadSignPath> jpgs = ImageTools::getFilesList("..\\Images\\RoadSigns\\", "*.jpg");	
+	vector<RoadSignPath> jpgs = ImageTools::getFilesList("..\\Images\\RoadSigns\\", "*.jpg");	
 		
 	roadSignsPath.insert(roadSignsPath.end(), pngs.begin(), pngs.end());
-	//roadSignsPath.insert(roadSignsPath.end(), jpgs.begin(), jpgs.end());
+	roadSignsPath.insert(roadSignsPath.end(), jpgs.begin(), jpgs.end());
 
 	vector<Vec3f>* circles;
 	vector<Mat> croppedImages;
@@ -52,6 +52,7 @@ int main(int argc, char** argv)
 			{
 				RoadSign rs((*circles)[j], roadSignsPath[i].getName());
 				roadSigns.push_back(rs);
+				break;
 			}
 		}
 	}
